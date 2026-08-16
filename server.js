@@ -50,7 +50,7 @@ app.post("/api/scraplog",async(req,res)=>{
     try{
         let {logid,sellerid,metalid,weight,date_recived,qualityid}=req.body;
         const result=await pool.query('INSERT INTO scraplog (logid,sellerid,metalid,weight,date_recived,qualityid) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',[logid,sellerid,metalid,weight,date_recived,qualityid])
-        res.json(result.rows[0]); 
+        res.status(201).json(result.rows[0]); 
     }
     catch(err){
         console.error(err);
@@ -60,11 +60,16 @@ app.post("/api/scraplog",async(req,res)=>{
 
 
 app.put("/api/orders/:id",async(req,res)=>{
-    let id=req.param.id;
+    let id=req.params.id;
     let status=req.body.status;
-    pool.query()
-
-
+    try{
+        let result=await pool.query("update orders set status=$2 where orderid=$1 RETURNING *",[id,status])
+        res.status(200).json(result.rows);
+    }
+    catch(err){
+        console.error(err.message);
+        res.status(500).send("server error");
+    }
 })
 
 // global error catcher
