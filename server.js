@@ -72,6 +72,30 @@ app.put("/api/orders/:id",async(req,res)=>{
     }
 })
 
+app.delete("/api/buyer/:id",async(req,res,next)=>{
+    let id=req.params.id
+    try{
+        let result=await pool.query("DELETE FROM buyer WHERE buyerid = $1 RETURNING *", 
+            [id] )
+    }
+    catch(err){
+        // console.error()
+        // console.log("Raw Error Code:", err.code);
+        if(err.code === '23503' || err.code === '23001'){
+            res.status(400).json({
+                status: "error",
+                message: "Cannot delete user. Active financial history exists.",
+                data: null
+            });
+
+        }
+        else{
+            next(err)
+        }
+    }
+    
+    
+})
 // global error catcher
 app.use((err,req,res,next)=>{
     console.error(err.message);
