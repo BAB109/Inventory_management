@@ -33,12 +33,24 @@ app.get('/api/categories',async(req,res,next)=>{
 
 app.get("/api/inventory",async(req,res,next)=>{
     try{
-        const result=await pool.query('select metal.metalname,quality.qualityname,weight from inventory INNER JOIN metal ON inventory.metalid=metal.metalid INNER JOIN quality ON inventory.qualityid=quality.qualityid')
-        res.status(200).json({
-            status:'success',
-            results:result.rowCount,
-            data:result.rows
-        })
+        const cacheddata=await redisClient.get("scrap_inventory");
+        if(cacheddata){
+            console.log("the data is in cache")
+            return res.status(200).json(JSON.parse(cacheddata));
+        }
+        else{
+            
+            console.log("cache is missing run query");
+            const result=await pool.query('select metal.metalname,quality.qualityname,weight from inventory INNER JOIN metal ON inventory.metalid=metal.metalid INNER JOIN quality ON inventory.qualityid=quality.qualityid')
+            await redisClient.setEx("scrap_inventory",3600,JSON.stringify(result.rows))
+            return res.status(200).json(result.rows);
+        }
+        //const result=await pool.query('select metal.metalname,quality.qualityname,weight from inventory INNER JOIN metal ON inventory.metalid=metal.metalid INNER JOIN quality ON inventory.qualityid=quality.qualityid')
+        // res.status(200).json({
+        //     status:'success',
+        //     results:result.rowCount,
+        //     data:result.rows
+        // })
     }
     catch(err){
         next(err)
@@ -119,3 +131,23 @@ pool.query('select now()',(err,res)=>{
         })
     }
 })
+
+const redis = require('redis');
+
+// Initialize the Redis Client
+const redisClient = redis.createClient({
+    url: 'redis://localhost:6379'
+});
+
+// Redis Event Listeners
+redisClient.on('error', (err) => console.error('Redis System Fault:', err.message));
+redisClient.on('connect', () => console.log('Redis Cache Engine Online on port 6379'));
+
+// Ignite the Cache Connection
+(async () => {
+    try {
+        await redisClient.connect();
+    } catch (err) {
+        console.error("Failed to connect to Redis:", err.message);
+    }
+})();
