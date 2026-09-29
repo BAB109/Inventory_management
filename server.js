@@ -62,6 +62,7 @@ app.post("/api/scraplog",async(req,res)=>{
     try{
         let {logid,sellerid,metalid,weight,date_recived,qualityid}=req.body;
         const result=await pool.query('INSERT INTO scraplog (logid,sellerid,metalid,weight,date_recived,qualityid) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',[logid,sellerid,metalid,weight,date_recived,qualityid])
+        await redisClient.del("scrap_inventory")
         res.status(201).json(result.rows[0]); 
     }
     catch(err){
@@ -76,6 +77,7 @@ app.put("/api/orders/:id",async(req,res)=>{
     let status=req.body.status;
     try{
         let result=await pool.query("update orders set status=$2 where orderid=$1 RETURNING *",[id,status])
+        await redisClient.del("scrap_inventory");
         res.status(200).json(result.rows);
     }
     catch(err){
@@ -89,6 +91,7 @@ app.delete("/api/buyer/:id",async(req,res,next)=>{
     try{
         let result=await pool.query("DELETE FROM buyer WHERE buyerid = $1 RETURNING *", 
             [id] )
+        await redisClient.del("scrap_inventory")
     }
     catch(err){
         // console.error()
