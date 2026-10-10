@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # 1. Express API Microservice
+  app:
+    build: .
+    container_name: scrap-api
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - PORT=${PORT}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - scrap-net
+
+  # 2. PostgreSQL Relational Database Service
+  postgres:
+    image: postgres:17-alpine
+    container_name: scrap-db
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database_structure.sql:/docker-entrypoint-initdb.d/database_structure.sql
+      - ./seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scrap-net
+
+  # 3. Redis In-Memory Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: scrap-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scrap-net
+
+# Isolated Internal Container Network
+networks:
+  scrap-net:
+    driver: bridge
+
+# Persistent Data Storage Volumes
+volumes:
+  pgdata:

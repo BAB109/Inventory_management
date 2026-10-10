@@ -130,7 +130,7 @@ app.use((err,req,res,next)=>{
 // server starting
 pool.query('select now()',(err,res)=>{
     if(err){
-        console.err("the connection failed")
+        console.error("the connection failed")
         process.exit(1);
     }
     else{
@@ -145,7 +145,7 @@ const redis = require('redis');
 
 // Initialize the Redis Client
 const redisClient = redis.createClient({
-    url: 'redis://localhost:6379'
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
 // Redis Event Listeners
